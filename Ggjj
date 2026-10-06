@@ -1,0 +1,302 @@
+if not game:IsLoaded() then
+    game.Loaded:Wait()
+end
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui", 10)
+
+if not PlayerGui then 
+    warn("ไม่พบ PlayerGui กรุณาลองรีเซ็ตตัวละครแล้วรันใหม่อีกครั้ง")
+    return 
+end
+
+-- เคลียร์ GUI เก่าถ้ามี
+if PlayerGui:FindFirstChild("NEXORAHugGUI") then
+    PlayerGui.NEXORAHugGUI:Destroy()
+end
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "NEXORAHugGUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = PlayerGui
+
+-- Main Frame (หน้าต่างหลักโค้งมน สไตล์พาสเทลน่ารัก)
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 230, 0, 280)
+MainFrame.Position = UDim2.new(0.5, -115, 0.4, -140)
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 24, 36)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Parent = ScreenGui
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 16)
+MainCorner.Parent = MainFrame
+
+-- ขอบรุ้งสุดคิ้วท์ (Animated Rainbow Border)
+local UIStroke = Instance.new("UIStroke")
+UIStroke.Thickness = 3.5
+UIStroke.Parent = MainFrame
+
+local UIGradient = Instance.new("UIGradient")
+UIGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 105, 180)),   -- ชมพู
+    ColorSequenceKeypoint.new(0.2, Color3.fromRGB(255, 165, 0)),   -- ส้ม
+    ColorSequenceKeypoint.new(0.4, Color3.fromRGB(255, 255, 0)),   -- เหลือง
+    ColorSequenceKeypoint.new(0.6, Color3.fromRGB(0, 255, 127)),   -- เขียว
+    ColorSequenceKeypoint.new(0.8, Color3.fromRGB(135, 206, 250)), -- ฟ้า
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(221, 160, 221))    -- ม่วง
+})
+UIGradient.Parent = UIStroke
+
+-- วนลูปให้ขอบรุ้งขยับได้
+local rainbowConn = RunService.Heartbeat:Connect(function()
+    UIGradient.Rotation = (UIGradient.Rotation + 2) % 360
+end)
+
+-- Title Bar (แถบหัวข้อ)
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 35)
+Title.BackgroundTransparency = 1
+Title.Text = "  ✨ NEXORA HUG ✨"
+Title.TextColor3 = Color3.fromRGB(255, 182, 193)
+Title.TextSize = 13
+Title.Font = Enum.Font.GothamBold
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = MainFrame
+
+-- ปุ่มปิด (×)
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 25, 0, 25)
+CloseBtn.Position = UDim2.new(1, -30, 0, 5)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 107, 107)
+CloseBtn.Text = "×"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseBtn.TextSize = 16
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.Parent = Title
+
+local CloseCorner = Instance.new("UICorner")
+CloseCorner.CornerRadius = UDim.new(1, 0)
+CloseCorner.Parent = CloseBtn
+
+-- ปุ่มย่อ (-)
+local MinBtn = Instance.new("TextButton")
+MinBtn.Size = UDim2.new(0, 25, 0, 25)
+MinBtn.Position = UDim2.new(1, -60, 0, 5)
+MinBtn.BackgroundColor3 = Color3.fromRGB(255, 209, 102)
+MinBtn.Text = "-"
+MinBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinBtn.TextSize = 16
+MinBtn.Font = Enum.Font.GothamBold
+MinBtn.Parent = Title
+
+local MinCorner = Instance.new("UICorner")
+MinCorner.CornerRadius = UDim.new(1, 0)
+MinCorner.Parent = MinBtn
+
+-- Content Container
+local ContentFrame = Instance.new("Frame")
+ContentFrame.Size = UDim2.new(1, -16, 1, -45)
+ContentFrame.Position = UDim2.new(0, 8, 0, 38)
+ContentFrame.BackgroundTransparency = 1
+ContentFrame.Parent = MainFrame
+
+-- ScrollingFrame รายชื่อผู้เล่น (โค้งมน)
+local ScrollingFrame = Instance.new("ScrollingFrame")
+ScrollingFrame.Size = UDim2.new(1, 0, 0, 145)
+ScrollingFrame.Position = UDim2.new(0, 0, 0, 0)
+ScrollingFrame.BackgroundColor3 = Color3.fromRGB(20, 16, 26)
+ScrollingFrame.BorderSizePixel = 0
+ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+ScrollingFrame.Parent = ContentFrame
+
+local ScrollCorner = Instance.new("UICorner")
+ScrollCorner.CornerRadius = UDim.new(0, 10)
+ScrollCorner.Parent = ScrollingFrame
+
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Padding = UDim.new(0, 4)
+UIListLayout.Parent = ScrollingFrame
+
+-- แสดงชื่อคนที่เลือก
+local SelectedLabel = Instance.new("TextLabel")
+SelectedLabel.Size = UDim2.new(1, 0, 0, 22)
+SelectedLabel.Position = UDim2.new(0, 0, 0, 150)
+SelectedLabel.BackgroundTransparency = 1
+SelectedLabel.Text = "💖 เลือก: ยังไม่ได้เลือก"
+SelectedLabel.TextColor3 = Color3.fromRGB(220, 200, 240)
+SelectedLabel.TextSize = 11
+SelectedLabel.Font = Enum.Font.GothamMedium
+SelectedLabel.Parent = ContentFrame
+
+-- ปุ่มกอด (Hug) สีพาสเทล
+local HugBtn = Instance.new("TextButton")
+HugBtn.Size = UDim2.new(0.48, 0, 0, 35)
+HugBtn.Position = UDim2.new(0, 0, 0, 180)
+HugBtn.BackgroundColor3 = Color3.fromRGB(112, 224, 0) -- เขียวพาสเทลสดใส
+HugBtn.Text = "🫂 กอด (Hug)"
+HugBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+HugBtn.TextSize = 12
+HugBtn.Font = Enum.Font.GothamBold
+HugBtn.Parent = ContentFrame
+
+local HugCorner = Instance.new("UICorner")
+HugCorner.CornerRadius = UDim.new(0, 10)
+HugCorner.Parent = HugBtn
+
+-- ปุ่มยกเลิก (Deselect)
+local DeselectBtn = Instance.new("TextButton")
+DeselectBtn.Size = UDim2.new(0.48, 0, 0, 35)
+DeselectBtn.Position = UDim2.new(0.52, 0, 0, 180)
+DeselectBtn.BackgroundColor3 = Color3.fromRGB(255, 110, 140) -- ชมพูพีช/แดงพาสเทล
+DeselectBtn.Text = "❌ ยกเลิก"
+DeselectBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+DeselectBtn.TextSize = 12
+DeselectBtn.Font = Enum.Font.GothamBold
+DeselectBtn.Parent = ContentFrame
+
+local DeselectCorner = Instance.new("UICorner")
+DeselectCorner.CornerRadius = UDim.new(0, 10)
+DeselectCorner.Parent = DeselectBtn
+
+-- Logic ตัวแปร
+local selectedPlayer = nil
+local isHugging = false
+local connection = nil
+local animTrack = nil
+
+local function updatePlayerList()
+    for _, child in ipairs(ScrollingFrame:GetChildren()) do
+        if child:IsA("TextButton") then
+            child:Destroy()
+        end
+    end
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            local pBtn = Instance.new("TextButton")
+            pBtn.Size = UDim2.new(1, -6, 0, 30)
+            pBtn.BackgroundColor3 = Color3.fromRGB(45, 38, 55)
+            pBtn.BorderSizePixel = 0
+            pBtn.Text = "  👤 " .. player.Name
+            pBtn.TextColor3 = Color3.fromRGB(245, 245, 255)
+            pBtn.TextSize = 11
+            pBtn.Font = Enum.Font.Gotham
+            pBtn.TextXAlignment = Enum.TextXAlignment.Left
+            pBtn.Parent = ScrollingFrame
+
+            local pCorner = Instance.new("UICorner")
+            pCorner.CornerRadius = UDim.new(0, 8)
+            pCorner.Parent = pBtn
+
+            pBtn.MouseButton1Click:Connect(function()
+                selectedPlayer = player
+                SelectedLabel.Text = "💖 เลือก: " .. player.Name
+            end)
+        end
+    end
+    ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, UIListLayout.AbsoluteContentSize.Y + 5)
+end
+
+Players.PlayerAdded:Connect(updatePlayerList)
+Players.PlayerRemoving:Connect(updatePlayerList)
+updatePlayerList()
+
+-- ปุ่มกอด: เริ่มวาร์ปและเปิดสิทธิ์ให้ลากหน้าจอ GUI ได้
+HugBtn.MouseButton1Click:Connect(function()
+    if not selectedPlayer then return end
+    isHugging = true
+
+    local char = LocalPlayer.Character
+    if char then
+        local humanoid = char:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            local animator = humanoid:FindFirstChildOfClass("Animator") or Instance.new("Animator", humanoid)
+            pcall(function()
+                local anim = Instance.new("Animation")
+                anim.AnimationId = "rbxassetid://139846829336719" -- ท่ากอด
+                animTrack = animator:LoadAnimation(anim)
+                animTrack:Play()
+                animTrack.Looped = true
+            end)
+        end
+    end
+
+    if connection then connection:Disconnect() end
+    connection = RunService.Heartbeat:Connect(function()
+        if not isHugging or not selectedPlayer or not selectedPlayer.Character or not selectedPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            return
+        end
+        local myChar = LocalPlayer.Character
+        if myChar and myChar:FindFirstChild("HumanoidRootPart") then
+            local targetHRP = selectedPlayer.Character.HumanoidRootPart
+            myChar.HumanoidRootPart.CFrame = targetHRP.CFrame * CFrame.new(0, 0, 0.8)
+        end
+    end)
+end)
+
+-- ปุ่มยกเลิก
+DeselectBtn.MouseButton1Click:Connect(function()
+    isHugging = false
+    selectedPlayer = nil
+    SelectedLabel.Text = "💖 เลือก: ยังไม่ได้เลือก"
+    if connection then
+        connection:Disconnect()
+        connection = nil
+    end
+    if animTrack then
+        pcall(function() animTrack:Stop() end)
+        animTrack = nil
+    end
+end)
+
+CloseBtn.MouseButton1Click:Connect(function()
+    if rainbowConn then rainbowConn:Disconnect() end
+    if connection then connection:Disconnect() end
+    if animTrack then pcall(function() animTrack:Stop() end) end
+    ScreenGui:Destroy()
+end)
+
+local minimized = false
+MinBtn.MouseButton1Click:Connect(function()
+    minimized = not minimized
+    ContentFrame.Visible = not minimized
+    MainFrame.Size = minimized and UDim2.new(0, 230, 0, 35) or UDim2.new(0, 230, 0, 280)
+    MinBtn.Text = minimized and "+" or "-"
+end)
+
+-- ระบบลาก GUI (Draggable) โดยจะลากได้ก็ต่อเมื่อกดปุ่มกอดแล้วเท่านั้น!
+local dragging, dragInput, dragStart, startPos
+Title.InputBegan:Connect(function(input)
+    if not isHugging then return end -- เงื่อนไข: ต้องกดกอดก่อนถึงจะลากได้
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+Title.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+print("NEXORA HUG CUTE VERSION Loaded Successfully!")
